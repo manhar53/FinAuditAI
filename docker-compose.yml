@@ -1,0 +1,29 @@
+# Local container setup. The API talks to Ollama on the HOST machine
+# (host.docker.internal) so the containers stay small.
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////data/finaudit.db
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - finaudit-data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  finaudit-data:

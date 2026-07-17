@@ -1,0 +1,13 @@
+.venv/
+node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+.env
+backend/finaudit.db
+.pytest_cache/
+sample_data/invoices/
+sample_data/expenses.csv
+sample_data/PLANTED_ANOMALIES.md
+sample_data/planted.json
+sample_data/ground_truth.json
