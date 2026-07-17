@@ -1,5 +1,9 @@
 # FinAudit AI
 
+**Live demo:** [fin-audit-ai.vercel.app](https://fin-audit-ai.vercel.app) ·
+[API docs](https://finaudit-api-dud4.onrender.com/docs)
+*(free-tier hosting — the first request after idle takes ~1 minute to wake the API)*
+
 AI-powered financial document audit and anomaly detection. Upload invoices (PDF) or
 expense reports (CSV); a pipeline of small, single-purpose agents extracts structured
 data, flags anomalies with rule-based **and** statistical checks, stores everything in
