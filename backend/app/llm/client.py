@@ -6,6 +6,7 @@ deployed demo (Render's free tier can't run Ollama).
 """
 import json
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -126,23 +127,32 @@ class GeminiClient(LLMClient):
         }
         if system:
             body["systemInstruction"] = {"parts": [{"text": system}]}
-        try:
-            r = httpx.post(
-                f"{self.BASE}/models/{self.model}:generateContent",
-                params={"key": self.api_key},
-                json=body,
-                timeout=TIMEOUT,
-            )
-            r.raise_for_status()
-            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        except httpx.HTTPStatusError as e:
-            # surface Google's error body — a retired model name or bad key is
-            # invisible without it
-            raise LLMUnavailableError(
-                f"Gemini {self.model} returned {e.response.status_code}: {e.response.text[:300]}"
-            ) from e
-        except (httpx.HTTPError, KeyError, IndexError) as e:
-            raise LLMUnavailableError(f"Gemini request failed: {e}") from e
+        # the free tier allows ~10-15 requests/min: batch uploads WILL hit 429s,
+        # and falling back to regex for a rate limit would silently degrade
+        # extraction, so wait out up to two of them
+        for backoff in (15, 30, None):
+            try:
+                r = httpx.post(
+                    f"{self.BASE}/models/{self.model}:generateContent",
+                    params={"key": self.api_key},
+                    json=body,
+                    timeout=TIMEOUT,
+                )
+                r.raise_for_status()
+                return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429 and backoff is not None:
+                    logger.info("Gemini rate-limited; retrying in %ss", backoff)
+                    time.sleep(backoff)
+                    continue
+                # surface Google's error body — a retired model name or bad key
+                # is invisible without it
+                raise LLMUnavailableError(
+                    f"Gemini {self.model} returned {e.response.status_code}: {e.response.text[:300]}"
+                ) from e
+            except (httpx.HTTPError, KeyError, IndexError) as e:
+                raise LLMUnavailableError(f"Gemini request failed: {e}") from e
+        raise LLMUnavailableError("Gemini rate limit persisted through retries")
 
     def embed(self, text: str) -> Optional[list[float]]:
         try:
