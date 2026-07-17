@@ -49,7 +49,9 @@ class RagStore:
             return []
 
         query_emb = get_llm_client().embed(query)
-        embedded = [c for c in chunks if c.embedding]
+        # different providers emit different vector sizes (nomic 768, gemini 3072);
+        # only chunks matching the query's dimension are comparable
+        embedded = [c for c in chunks if c.embedding and (not query_emb or len(c.embedding) == len(query_emb))]
         if query_emb and embedded:
             q = np.array(query_emb)
             matrix = np.array([c.embedding for c in embedded])

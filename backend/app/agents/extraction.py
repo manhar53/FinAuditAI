@@ -177,14 +177,30 @@ LINE_ITEM_RE = re.compile(r"^(.+?)\s+(\d+)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})$"
 BULLET_ITEM_RE = re.compile(r"^[-•*]\s*(.+?)\s+([\d,]+\.\d{2})$")
 
 
+# document-type banners ("TAX INVOICE", "PURCHASE MEMO", a lone "INVOICE") are
+# never the vendor — and PDF text extractors differ on whether they come first
+BANNER_RE = re.compile(
+    r"^(?:tax|purchase|travel|proforma)?\s*(?:invoice|memo|bill|statement|receipt)$", re.I
+)
+
+
+def _vendor_from_lines(lines: list[str]) -> Optional[str]:
+    for ln in lines[:6]:
+        if BANNER_RE.fullmatch(ln.strip()):
+            continue
+        candidate = re.sub(r"\s*invoice\s*$", "", ln, flags=re.I).strip()
+        if candidate:
+            return candidate
+    return None
+
+
 def regex_extract(text: str) -> ExtractedDoc:
     """Deterministic extractor: fills gaps in LLM output and is the full
     fallback when no LLM is reachable."""
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     doc = ExtractedDoc(file_type="pdf", raw_text=text, extraction_method="regex_fallback")
 
-    if lines:
-        doc.vendor_name = re.sub(r"\s*INVOICE\s*$", "", lines[0]).strip() or None
+    doc.vendor_name = _vendor_from_lines(lines)
 
     if m := INVOICE_NO_RE.search(text):
         doc.invoice_number = m.group(1)

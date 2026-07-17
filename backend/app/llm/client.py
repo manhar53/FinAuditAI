@@ -42,7 +42,8 @@ class LLMClient(ABC):
         for attempt in range(retries + 1):
             try:
                 raw = self.complete(prompt, system=system)
-            except LLMUnavailableError:
+            except LLMUnavailableError as e:
+                logger.warning("LLM call failed (%s): %s", self.name, e)
                 return None
             start, end = raw.find("{"), raw.rfind("}")
             if start != -1 and end > start:
@@ -134,6 +135,12 @@ class GeminiClient(LLMClient):
             )
             r.raise_for_status()
             return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except httpx.HTTPStatusError as e:
+            # surface Google's error body — a retired model name or bad key is
+            # invisible without it
+            raise LLMUnavailableError(
+                f"Gemini {self.model} returned {e.response.status_code}: {e.response.text[:300]}"
+            ) from e
         except (httpx.HTTPError, KeyError, IndexError) as e:
             raise LLMUnavailableError(f"Gemini request failed: {e}") from e
 

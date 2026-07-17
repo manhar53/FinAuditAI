@@ -42,3 +42,15 @@ app.include_router(stats.router)
 def health():
     client = get_llm_client(refresh=True)
     return {"status": "ok", "llm_provider": client.name, "llm_available": client.available()}
+
+
+@app.get("/health/llm")
+def health_llm():
+    """Real round-trip probe. available() only checks reachability/key presence;
+    this catches invalid keys and retired model names, with the actual error."""
+    client = get_llm_client(refresh=True)
+    try:
+        reply = client.complete("Reply with the single word OK")
+        return {"provider": client.name, "ok": True, "reply": reply.strip()[:40]}
+    except Exception as e:
+        return {"provider": client.name, "ok": False, "error": str(e)[:400]}

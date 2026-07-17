@@ -42,6 +42,13 @@ def test_regex_handles_messy_labels_and_bullets():
     assert doc.total_amount == 9_750.0  # "Net Payable" label
     assert len(doc.line_items) == 2  # bullet-style items
     assert doc.line_items[0].amount == 6_250.0
+    assert doc.vendor_name == "OfficeMart Supplies"  # skips the PURCHASE MEMO banner
+
+
+def test_vendor_skips_banner_first_layouts():
+    # some PDF extractors emit the right-aligned banner before the vendor line
+    doc = regex_extract("INVOICE\nAcme IT Solutions\n4th Floor, Cyber Towers\n")
+    assert doc.vendor_name == "Acme IT Solutions"
 
 
 def test_finalize_derives_total_and_infers_category():
