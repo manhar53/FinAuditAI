@@ -1,0 +1,18 @@
+# Render blueprint: deploys the FastAPI backend with one click
+# (Render dashboard -> New -> Blueprint -> select this repo).
+# Only GEMINI_API_KEY has to be pasted in by hand (sync: false).
+services:
+  - type: web
+    name: finaudit-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
