@@ -4,6 +4,11 @@
 [API docs](https://finaudit-api-dud4.onrender.com/docs)
 *(free-tier hosting — the first request after idle takes ~1 minute to wake the API)*
 
+No data of your own? The **Documents** tab ships with a "Try it with sample data"
+gallery — one click loads a full demo dataset, or send a single sample through to
+watch a specific check (duplicate, amount outlier, missing field, bad date,
+miscategorised, or a messy-layout invoice that only the LLM path can read) fire live.
+
 AI-powered financial document audit and anomaly detection. Upload invoices (PDF) or
 expense reports (CSV); a pipeline of small, single-purpose agents extracts structured
 data, flags anomalies with rule-based **and** statistical checks, stores everything in

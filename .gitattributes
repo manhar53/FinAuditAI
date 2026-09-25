@@ -1,0 +1,16 @@
+# Treat these as binary — never apply line-ending conversion (would corrupt them)
+*.pdf binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+
+# Normalize text line endings to LF in the repo
+*.py text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.html text eol=lf

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, inr } from "../api.js";
+import SampleGallery from "./SampleGallery.jsx";
 
 function DocumentDetail({ id }) {
   const [detail, setDetail] = useState(null);
@@ -94,8 +95,10 @@ export default function Documents({ version, onChanged }) {
 
   return (
     <>
+      <SampleGallery onChanged={onChanged} />
+
       <section className="panel" style={{ marginBottom: 16 }}>
-        <h2>Upload documents</h2>
+        <h2>Upload your own documents</h2>
         <p style={{ color: "var(--text-secondary)", marginBottom: 10 }}>
           Invoice PDFs (with a text layer) or expense-report CSVs. Each file runs through
           extraction and all five anomaly checks; results appear below immediately.

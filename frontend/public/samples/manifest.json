@@ -1,0 +1,76 @@
+{
+  "note": "Curated sample documents bundled with the app so anyone can try the auditor without their own data. 'demoBundle' is uploaded in order by the 'Load demo dataset' button so vendor history exists before the outlier/duplicate checks run.",
+  "demoBundle": [
+    "INV-AI-1003.pdf",
+    "INV-AI-1004.pdf",
+    "INV-AI-1005.pdf",
+    "INV-AI-1006.pdf",
+    "INV-AI-1007.pdf",
+    "INV-AI-1007_resubmitted.pdf",
+    "INV-AI-1008.pdf",
+    "expenses.csv",
+    "officemart_no_number.pdf",
+    "INV-OS-1007.pdf",
+    "INV-ST-1007.pdf",
+    "nimbus_tax_invoice_0071.pdf"
+  ],
+  "samples": [
+    {
+      "file": "INV-AI-1007.pdf",
+      "secondFile": "INV-AI-1007_resubmitted.pdf",
+      "title": "Duplicate invoice",
+      "rule": "DUPLICATE_INVOICE",
+      "demonstrates": "The same invoice number submitted twice (an original and a 'resubmitted' copy).",
+      "expected": "The second upload is flagged as a duplicate of the first — the classic double-billing check.",
+      "selfContained": true
+    },
+    {
+      "file": "INV-AI-1008.pdf",
+      "title": "Amount outlier",
+      "rule": "AMOUNT_OUTLIER",
+      "demonstrates": "An Acme IT invoice for ₹4,80,000 when this vendor normally bills ₹85k–110k.",
+      "expected": "Flagged as ~5x the vendor's typical amount, using a robust (median/MAD) z-score.",
+      "needsHistory": true
+    },
+    {
+      "file": "officemart_no_number.pdf",
+      "title": "Missing field",
+      "rule": "MISSING_FIELD",
+      "demonstrates": "An invoice with no invoice number printed on it.",
+      "expected": "Flagged for a missing required field — extraction records what could and couldn't be found.",
+      "selfContained": true
+    },
+    {
+      "file": "INV-OS-1007.pdf",
+      "title": "Future-dated invoice",
+      "rule": "DATE_INCONSISTENT",
+      "demonstrates": "An invoice dated in the future (15 Jan 2027).",
+      "expected": "Flagged as a date inconsistency.",
+      "selfContained": true
+    },
+    {
+      "file": "INV-ST-1007.pdf",
+      "title": "Category mismatch",
+      "rule": "CATEGORY_MISMATCH",
+      "demonstrates": "Travel line items (flights, hotel) filed under 'Office Supplies'.",
+      "expected": "Flagged because the line items don't match the declared category.",
+      "selfContained": true
+    },
+    {
+      "file": "nimbus_tax_invoice_0071.pdf",
+      "title": "Messy layout (LLM extraction)",
+      "rule": null,
+      "demonstrates": "A differently-formatted invoice ('Bill No', 'Amount Due', a spelled-out date) that the rule-based parser can't read.",
+      "expected": "Extracts cleanly via the LLM path — check the Extraction column to see 'llm' rather than 'regex_fallback'.",
+      "selfContained": true
+    },
+    {
+      "file": "expenses.csv",
+      "title": "Bulk expense report (CSV)",
+      "rule": null,
+      "demonstrates": "22 expense rows for BrightSpark Marketing, including a duplicated reference and a ₹3,50,000 outlier.",
+      "expected": "One upload creates many records and fires several checks at once — duplicate + amount outlier.",
+      "selfContained": true
+    }
+  ]
+}

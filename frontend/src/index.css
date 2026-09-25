@@ -336,6 +336,76 @@ input:focus, select:focus {
   text-align: center;
 }
 
+/* sample gallery */
+.bundle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.bundle-status {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.sample-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.sample-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sample-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.sample-demo {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sample-expect {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sample-expect-label {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sample-note {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.sample-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.sample-actions a.btn { text-decoration: none; }
+
+.sample-result {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
 /* chat widget */
 .chat-fab {
   position: fixed;

@@ -44,7 +44,17 @@ export const api = {
     form.append("file", file);
     return request("/documents/upload", { method: "POST", body: form });
   },
+  // fetch a bundled sample from /public/samples and send it through the real
+  // upload pipeline — same code path as a user-provided file
+  uploadSample: async (filename) => {
+    const res = await fetch(`${import.meta.env.BASE_URL}samples/${filename}`);
+    if (!res.ok) throw new Error(`Sample ${filename} not found (${res.status})`);
+    const blob = await res.blob();
+    return api.upload(new File([blob], filename, { type: blob.type }));
+  },
 };
+
+export const sampleUrl = (filename) => `${import.meta.env.BASE_URL}samples/${filename}`;
 
 export const inr = (n) =>
   n === null || n === undefined
