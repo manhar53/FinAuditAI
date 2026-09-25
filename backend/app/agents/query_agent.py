@@ -16,7 +16,7 @@ from typing import Callable, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.agents.extraction import normalize_vendor, parse_date
+from app.agents.extraction import KNOWN_CATEGORIES, normalize_vendor, parse_date
 from app.db.models import Anomaly, Document
 from app.llm.client import get_llm_client
 from app.llm.prompts import RAG_ANSWER_PROMPT, RAG_ANSWER_SYSTEM, ROUTER_PROMPT, ROUTER_SYSTEM
@@ -284,25 +284,38 @@ def _time_params(question: str) -> dict:
     return {}
 
 
+SPEND_RE = re.compile(r"spend|spent|spending|total|cost|how much|expense|paid|pay", re.I)
+
+
 def keyword_route(db: Session, question: str) -> tuple[str, dict]:
-    """Deterministic fallback router — no LLM required."""
+    """Deterministic fallback router — no LLM required. Runs whenever the LLM
+    is down or over quota, so it must give correct answers, not just plausible
+    ones: a wrong number is worse than an honest 'here's the closest tool'."""
     q = question.lower()
     params = _time_params(question)
 
     known_vendors = [v for (v,) in db.query(Document.vendor_name).distinct().all() if v]
     named = next((v for v in known_vendors if v.lower() in q), None)
+    # a category named in the question ("cloud services", "travel") is a strong
+    # spend-by-category signal even without the literal word "category"
+    mentions_category = any(cat.lower() in q for cat in KNOWN_CATEGORIES) or "categor" in q
+    asks_spend = bool(SPEND_RE.search(q))
 
     if re.search(r"most (flagged|anomal)|which vendor|top vendor", q):
         return "top_vendors_by_anomalies", params
     if re.search(r"(above|over|more than|greater)", q) and _extract_amount(question):
         return "anomalies_above_amount", {**params, "min_amount": _extract_amount(question)}
-    if "categor" in q and re.search(r"spend|total|much|cost", q):
-        return "spend_by_category", params
     if re.search(r"trend|over time|monthly|per month", q):
         return "spend_over_time", params
+    # spend for one named vendor -> vendor summary carries their total; otherwise
+    # any spend/total question (with or without a category word) -> by category
+    if asks_spend and named:
+        return "vendor_summary", {"vendor": named}
+    if asks_spend or mentions_category:
+        return "spend_by_category", params
     if named:
         return "vendor_summary", {"vendor": named}
-    if re.search(r"anomal|flag|issue|problem", q):
+    if re.search(r"anomal|flag|issue|problem|duplicat|outlier|missing", q):
         return "anomaly_counts_by_rule", {}
     return "anomaly_counts_by_rule", {}
 
@@ -330,24 +343,46 @@ def llm_route(question: str) -> Optional[tuple[str, dict]]:
 
 # ------------------------------------------------------------- RAG path
 
+def _rag_extractive_answer(question: str, chunks) -> str:
+    """Readable answer built directly from retrieved records, no LLM needed.
+    Used when the LLM is down or over quota — anomaly explanations are already
+    plain English, so we lead with the flags and cite them rather than dumping
+    raw chunks at the reader."""
+    anomaly_chunks = [c for c in chunks if c.source_type == "anomaly"]
+    if anomaly_chunks:
+        # strip the "[RULE, severity] " prefix the store prepends for indexing
+        flags = [re.sub(r"^\[[^\]]+\]\s*", "", c.text).strip() for c in anomaly_chunks]
+        lead = (
+            f"{len(flags)} related flag{'s' if len(flags) != 1 else ''} in the audit records:"
+        )
+        return lead + "\n" + "\n".join(f"• {f}" for f in flags)
+    # no anomalies retrieved — summarise the matching documents plainly
+    return "Closest matching records:\n" + "\n".join(f"• {c.text}" for c in chunks)
+
+
 def rag_answer(db: Session, question: str) -> dict:
     chunks = rag_store.search(db, question, k=6)
     if not chunks:
         return {"answer": "No indexed audit records match that question yet.", "tool_used": "rag", "rows": []}
     context = "\n".join(f"- {c.text}" for c in chunks)
     client = get_llm_client()
+    synthesized = False
+    answer = _rag_extractive_answer(question, chunks)
     if client.available():
         try:
             answer = client.complete(
                 RAG_ANSWER_PROMPT.format(context=context, question=question),
                 system=RAG_ANSWER_SYSTEM,
             ).strip()
-        except Exception:
-            answer = "Most relevant audit records:\n" + context
-    else:
-        answer = "Most relevant audit records:\n" + context
+            synthesized = True
+        except Exception as e:
+            logger.warning("RAG synthesis failed, using extractive fallback: %s", e)
     rows = [{"source": c.source_type, "source_id": c.source_id, "text": c.text} for c in chunks]
-    return {"answer": answer, "tool_used": "rag", "rows": rows}
+    return {
+        "answer": answer,
+        "tool_used": "rag" if synthesized else "rag (extractive fallback)",
+        "rows": rows,
+    }
 
 
 class QueryAgent:

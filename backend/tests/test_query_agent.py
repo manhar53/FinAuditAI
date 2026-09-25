@@ -54,6 +54,23 @@ def test_keyword_route_vendor_summary(db):
     assert params["vendor"] == "Acme IT Solutions"
 
 
+def test_keyword_route_spend_by_category_name(db):
+    # regression: a category NAME (not the word "category") must route to spend,
+    # not fall through to the anomaly-counts default
+    for q in ["what did we spend in total on cloud services?",
+              "how much did travel cost us?",
+              "total spend by category"]:
+        tool, _ = keyword_route(db, q)
+        assert tool == "spend_by_category", q
+
+
+def test_keyword_route_vendor_spend(db):
+    seed(db)
+    tool, params = keyword_route(db, "how much have we spent with Acme IT Solutions?")
+    assert tool == "vendor_summary"
+    assert params["vendor"] == "Acme IT Solutions"
+
+
 def test_end_to_end_tool_answer(db, monkeypatch):
     # force the keyword path so the test never depends on a live LLM
     monkeypatch.setattr("app.agents.query_agent.llm_route", lambda q: None)
